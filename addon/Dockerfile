@@ -30,4 +30,4 @@ RUN npm ci --only=production
 # Copy local code to the container image.
 COPY . .
 
-CMD [ "dumb-init", "node", "src/client/index.js" ]
+CMD [ "dumb-init", "node", "src/index.js" ]
