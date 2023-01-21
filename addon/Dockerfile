@@ -5,6 +5,7 @@ FROM node:16.16-alpine AS node
 
 FROM $BUILD_FROM
 
+
 # Using this so we can have node 16 version
 COPY --from=node /usr/lib /usr/lib
 COPY --from=node /usr/local/share /usr/local/share
