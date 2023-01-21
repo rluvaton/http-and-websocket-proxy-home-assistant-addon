@@ -28,7 +28,7 @@ let config;
 /**
  * @type {Record<string, {socket: WebSocket, open: boolean, authenticated: boolean, buffer: any[]}>}
  */
-let wsByUrl = {};
+let wsConnections = {};
 
 /**
  * @type {import("socket.io-client").Socket}
@@ -77,7 +77,10 @@ async function run() {
     if (event.startsWith('http-')) {
       res = await proxyHttpRequest(req);
     } else if (event.startsWith('ws-')) {
-      startListening(req);
+      if(event === 'ws-open' || event === 'ws-close') {
+        return;
+      }
+      sendMessages(req);
     } else {
       logger.error('unknown event', { event, data: req });
       res = { message: 'unknown event', error: true };
@@ -87,6 +90,14 @@ async function run() {
     }
 
     cb?.(res);
+  });
+
+  socketBetweenClientToProxy.on('ws-open', async (req, cb) => {
+    startListening(req);
+  });
+
+  socketBetweenClientToProxy.on('ws-close', async (req, cb) => {
+    stopListening(req);
   });
 }
 
@@ -107,66 +118,78 @@ function isWsAuthMessage(message) {
 }
 
 function startListening(req) {
-  let ws = wsByUrl[req.url];
+  let ws = wsConnections[req.clientId];
 
   if (!ws) {
-    wsByUrl[req.url] = {
+    wsConnections[req.clientId] = {
       buffer: [],
       socket: undefined,
       open: false,
       authenticated: false,
     };
-    ws = wsByUrl[req.url];
+
+    ws = wsConnections[req.clientId];
   }
 
-  if (!ws.socket) {
-    let address = `${localHomeAssistant}${req.url}`;
+  if (ws.socket) {
+    logger.info({ clientId: req.clientId }, 'Already connected');
+    return;
+  }
 
-    if (address.startsWith('http://')) {
-      address = address.replace('http://', 'ws://')
+  let address = `${localHomeAssistant}${req.url}`;
+  if (address.startsWith('http://')) {
+    address = address.replace('http://', 'ws://')
+  }
+
+  ws.socket = new WebSocket(address);
+
+  ws.socket.on('open', function open() {
+    logger.info('WebSocket opened!');
+
+    if (ws.buffer.length) {
+      logger.info('Got messages in the buffer');
+      try {
+        ws.buffer.forEach(item => {
+          if (isWsAuthMessage(item)) {
+            ws.authenticated = true;
+          }
+
+          ws.socket.send(item);
+        })
+      } catch (e) {
+        logger.error(e, 'failed to send message to web socket');
+        return false;
+      }
     }
 
-    ws.socket = new WebSocket(address);
+    ws.open = true;
+    ws.buffer = [];
+  });
 
-    ws.socket.on('open', function open() {
-      logger.info('WebSocket opened!');
+  ws.socket.on('message', function message(data) {
+    logger.debug({ data: data.toString() }, 'received message on WebSocket');
 
-      if (ws.buffer.length) {
-        logger.info('Got messages in the buffer');
-        try {
-          ws.buffer.forEach(item => {
-            if (isWsAuthMessage(item)) {
-              ws.authenticated = true;
-            }
+    socketBetweenClientToProxy
+      .compress(false)
+      .emit('ws-message', data);
+  });
 
-            ws.socket.send(item);
-          })
-        } catch (e) {
-          logger.error(e, 'failed to send message to web socket');
-          return false;
-        }
-      }
+  ws.socket.on('close', () => {
+    logger.info('WebSocket client closed');
 
-      ws.open = true;
-      ws.buffer = [];
-    });
+    ws.open = false;
+    // TODO - should I terminate it?
+    ws.socket = undefined;
+    ws.authenticated = false;
+  });
+}
 
-    ws.socket.on('message', function message(data) {
-      logger.debug({ data: data.toString() }, 'received message on WebSocket');
+function sendMessages(req) {
+  const ws = wsConnections[req.clientId];
 
-      socketBetweenClientToProxy
-        .compress(false)
-        .emit('ws-message', data);
-    });
-
-    ws.socket.on('close', () => {
-      logger.info('WebSocket client closed');
-
-      ws.open = false;
-      // TODO - should I terminate it?
-      ws.socket = undefined;
-      ws.authenticated = false;
-    });
+  if (!ws) {
+    logger.error({ clientId: req.clientId }, 'Not connected exiting');
+    return;
   }
 
   const messageToSend = req.body.toString();
@@ -174,20 +197,20 @@ function startListening(req) {
   if (!ws.open) {
     ws.buffer.push(messageToSend);
     return;
-  } else {
-    if (ws.authenticated && isWsAuthMessage(messageToSend)) {
-      logger.info('Received auth message why the socket open which means that the server disconnected');
+  }
 
-      ws.socket.terminate();
-      ws.socket.eventNames().forEach(eventName => ws.socket.removeAllListeners(eventName))
-      ws.socket = undefined;
-      ws.open = undefined;
-      ws.authenticated = false;
+  if (ws.authenticated && isWsAuthMessage(messageToSend)) {
+    logger.info('Received auth message why the socket open which means that the server disconnected');
 
-      startListening(req);
+    ws.socket?.terminate();
+    ws.socket?.eventNames().forEach(eventName => ws.socket.removeAllListeners(eventName))
+    ws.socket = undefined;
+    ws.open = undefined;
+    ws.authenticated = false;
 
-      return;
-    }
+    startListening(req);
+
+    return;
   }
 
   logger.info({ messageToSend }, 'send to home assistant');
@@ -227,6 +250,24 @@ function proxyHttpRequest(req) {
       data: error.response?.data,
     }
   })
+}
+
+function stopListening(req) {
+  let ws = wsConnections[req.clientId];
+
+  if (!ws) {
+    logger.info({ requestId: req.requestId }, 'WebSocket already closed');
+    return;
+  }
+
+  if (!ws.open) {
+    logger.info({ requestId: req.requestId }, 'WebSocket already closed');
+  }
+
+
+  ws.socket?.terminate();
+  ws.socket?.eventNames().forEach(eventName => ws.socket.removeAllListeners(eventName))
+  wsConnections[req.clientId] = undefined;
 }
 
 
