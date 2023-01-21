@@ -118,6 +118,7 @@ function isWsAuthMessage(message) {
 }
 
 function startListening(req) {
+  logger.info({requestId: req.requestId}, 'Starting Listening');
   let ws = wsConnections[req.clientId];
 
   if (!ws) {
@@ -185,11 +186,13 @@ function startListening(req) {
 }
 
 function sendMessages(req) {
+  logger.info({requestId: req.requestId}, 'Send message');
+
   const ws = wsConnections[req.clientId];
 
   if (!ws) {
     logger.error({ clientId: req.clientId }, 'Not connected exiting');
-    return;
+    startListening();
   }
 
   const messageToSend = req.body.toString();
@@ -253,6 +256,8 @@ function proxyHttpRequest(req) {
 }
 
 function stopListening(req) {
+  logger.info({requestId: req.requestId}, 'Stop Listening');
+
   let ws = wsConnections[req.clientId];
 
   if (!ws) {
