@@ -1,4 +1,4 @@
-const logger = require('../common/logger');
+const logger = require('./logger');
 const Axios = require('axios');
 const { io } = require("socket.io-client");
 const { loadConfig } = require('./config-home-assistant');

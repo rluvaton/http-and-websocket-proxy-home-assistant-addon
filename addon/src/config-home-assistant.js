@@ -1,7 +1,7 @@
 const fs = require('fs/promises');
 
-const logger = require('../common/logger');
-const { deepFreeze } = require('../common/general');
+const logger = require('./logger');
+const { deepFreeze } = require('./general');
 
 const CONFIG_FILE = '/data/options.json'
 
@@ -20,15 +20,7 @@ async function loadConfig() {
     } catch (error) {
       logger.error({ path: CONFIG_FILE, error }, 'Could not parse options file');
 
-      // TODO - return this
       throw error;
-      config = {
-        "localHomeAssistantUrl": "http://homeassistant.local:8123",
-        "remoteWsUrl": "ws://192.168.1.10:3000",
-        "socketToken": "dsaa",
-        "logLevel": "debug"
-      };
-
     }
   }
 
