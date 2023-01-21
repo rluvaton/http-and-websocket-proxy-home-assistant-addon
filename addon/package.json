@@ -1,26 +1,23 @@
 {
-  "name": "http-and-webhook-proxy",
+  "name": "http-and-webhook-proxy-client",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src/server/index.js",
     "client:dev": "node src/index.js",
-    "client:prod": "NODE_ENV=production node src/index.js",
-    "prod:logs": "fly logs --app http-and-webhook-proxy",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "client:prod": "NODE_ENV=production node src/index.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rluvaton/http-and-webhook-proxy.git"
+    "url": "git+https://github.com/rluvaton/http-and-websocket-proxy-home-assistant-addon.git"
   },
   "keywords": [],
   "author": "Raz Luvaton",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/rluvaton/http-and-webhook-proxy/issues"
+    "url": "https://github.com/rluvaton/http-and-websocket-proxy-home-assistant-addon/issues"
   },
-  "homepage": "https://github.com/rluvaton/http-and-webhook-proxy#readme",
+  "homepage": "https://github.com/rluvaton/http-and-websocket-proxy-home-assistant-addon#readme",
   "dependencies": {
     "axios": "^0.27.2",
     "pino": "^8.3.0",
