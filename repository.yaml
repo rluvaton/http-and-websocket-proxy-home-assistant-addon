@@ -1,0 +1,4 @@
+# https://developers.home-assistant.io/docs/add-ons/repository#repository-configuration
+name: HTTP and WebSocket Proxy Client
+url: 'https://github.com/rluvaton/http-and-websocket-proxy-home-assistant-addon'
+maintainer: Raz Luvaton

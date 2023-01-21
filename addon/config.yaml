@@ -1,0 +1,32 @@
+name: "HTTP & WebSocket Proxy"
+description: "HTTP & WebSocket Proxy to access HomeAssistant without exposing local ports"
+version: "1.0.1"
+url: "https://github.com/rluvaton/http-and-webhook-proxy"
+slug: "http_and_websocket_proxy"
+
+# This is required for me for some reason as it won't be able to run otherwise ¯\_(ツ)_/¯
+init: false
+
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+
+# Access the home assistant API (check again if needed)
+auth_api: true
+
+# The options for the Add On
+schema:
+  # The home assistant that we will proxy to
+  localHomeAssistantUrl: url
+
+  # The WebSocket we will talk to
+  remoteWsUrl: url
+
+  # The WebSocket token to verify ourselves
+  socketToken: str
+
+  # The log level
+  logLevel: list(trace|debug|info|warn|error|fatal|silent)

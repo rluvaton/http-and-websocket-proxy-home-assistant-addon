@@ -1,0 +1,34 @@
+{
+  "name": "http-and-webhook-proxy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/server/index.js",
+    "client:dev": "node src/client/index.js",
+    "client:prod": "NODE_ENV=production node src/client/index.js",
+    "prod:logs": "fly logs --app http-and-webhook-proxy",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rluvaton/http-and-webhook-proxy.git"
+  },
+  "keywords": [],
+  "author": "Raz Luvaton",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rluvaton/http-and-webhook-proxy/issues"
+  },
+  "homepage": "https://github.com/rluvaton/http-and-webhook-proxy#readme",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "pino": "^8.3.0",
+    "pino-pretty": "^8.1.0",
+    "socket.io-client": "^4.5.1",
+    "ws": "^8.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.6"
+  }
+}
