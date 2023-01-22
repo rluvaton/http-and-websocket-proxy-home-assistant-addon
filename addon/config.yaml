@@ -1,6 +1,6 @@
 name: "HTTP & WebSocket Proxy"
 description: "HTTP & WebSocket Proxy to access HomeAssistant without exposing local ports"
-version: "1.1.8"
+version: "1.1.9"
 url: "https://github.com/rluvaton/http-and-webhook-proxy"
 slug: "http_and_websocket_proxy"
 
