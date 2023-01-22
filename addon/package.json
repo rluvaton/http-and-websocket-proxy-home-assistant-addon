@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "postinstall": "patch-package",
     "client:dev": "node src/index.js",
     "client:prod": "NODE_ENV=production node src/index.js"
   },
