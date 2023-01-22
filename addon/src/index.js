@@ -240,12 +240,17 @@ function proxyHttpRequest(req) {
       data: res.data,
     }
   }).catch((error) => {
+    let responseData = error.response?.data;
+
+    if(Buffer.isBuffer(responseData)) {
+      responseData = responseData.toString();
+    }
     logger.error({
-      response: error.response?.data,
+      response: responseData,
       headers: error.response?.headers,
       status: error.response?.status,
-      error,
-      req,
+      error: error?.message,
+      // req,
     }, '[HTTP] Some error in the response');
 
     return {
@@ -270,14 +275,12 @@ function stopListening(req) {
     logger.info({ requestId: req.requestId }, '[WebSocket] already closed');
   }
 
-
   ws.socket?.terminate();
   ws.socket?.eventNames().forEach(eventName => ws.socket.removeAllListeners(eventName))
   wsConnections[req.clientId] = undefined;
 
   logger.info({ requestId: req.requestId }, '[WebSocket] closed');
 }
-
 
 function logEvent(event, req) {
   let mutableReq = { ...req };
