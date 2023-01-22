@@ -21,6 +21,7 @@
   "homepage": "https://github.com/rluvaton/http-and-websocket-proxy-home-assistant-addon#readme",
   "dependencies": {
     "axios": "^0.27.2",
+    "patch-package": "^6.5.1",
     "pino": "^8.3.0",
     "pino-pretty": "^8.1.0",
     "socket.io-client": "^4.5.1",
