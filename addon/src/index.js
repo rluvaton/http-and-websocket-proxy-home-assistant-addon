@@ -171,7 +171,6 @@ function startListening(req) {
     logger.debug({ data: data.toString() }, '[WebSocket] received message');
 
     socketBetweenClientToProxy
-      .compress(false)
       .emit('ws-message', data);
   });
 
@@ -286,6 +285,8 @@ function logEvent(event, req) {
   if(Buffer.isBuffer(mutableReq.body)) {
     mutableReq.body = mutableReq.body.toString();
   }
+
+  delete mutableReq.headers;
 
   logger.debug(mutableReq, `[${event}] got event`);
 }
