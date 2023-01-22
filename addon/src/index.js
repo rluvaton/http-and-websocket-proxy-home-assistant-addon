@@ -63,11 +63,11 @@ async function run() {
   });
 
   socketBetweenClientToProxy.on("connect", () => {
-    logger.info(`socket connected: ${socketBetweenClientToProxy.id}`);
+    logger.info(`[Proxy Connection] socket connected: ${socketBetweenClientToProxy.id}`);
   });
 
   socketBetweenClientToProxy.onAny(async (event, req, cb) => {
-    logger.debug({ event, req }, 'got event');
+    logEvent(event, req);
 
     // Cause 400 error
     delete req?.headers?.['x-forwarded-for'];
@@ -92,11 +92,11 @@ async function run() {
     cb?.(res);
   });
 
-  socketBetweenClientToProxy.on('ws-open', async (req, cb) => {
+  socketBetweenClientToProxy.on('ws-open', async (req) => {
     startListening(req);
   });
 
-  socketBetweenClientToProxy.on('ws-close', async (req, cb) => {
+  socketBetweenClientToProxy.on('ws-close', async (req) => {
     stopListening(req);
   });
 }
@@ -118,7 +118,7 @@ function isWsAuthMessage(message) {
 }
 
 function startListening(req) {
-  logger.info({requestId: req.requestId}, 'Starting Listening');
+  logger.info({requestId: req.requestId}, '[WebSocket] Starting Listening');
   let ws = wsConnections[req.clientId];
 
   if (!ws) {
@@ -133,11 +133,11 @@ function startListening(req) {
   }
 
   if (ws.socket) {
-    logger.info({ clientId: req.clientId }, 'Already connected');
+    logger.info({ clientId: req.clientId }, '[WebSocket] Already connected');
     return;
   }
 
-  let address = `${localHomeAssistant}${req.url}`;
+  let address = `${localHomeAssistant}${req.url || ''}`;
   if (address.startsWith('http://')) {
     address = address.replace('http://', 'ws://')
   }
@@ -145,10 +145,10 @@ function startListening(req) {
   ws.socket = new WebSocket(address);
 
   ws.socket.on('open', function open() {
-    logger.info('WebSocket opened!');
+    logger.info('[WebSocket] WebSocket opened!');
 
     if (ws.buffer.length) {
-      logger.info('Got messages in the buffer');
+      logger.info('[WebSocket] Got messages in the buffer');
       try {
         ws.buffer.forEach(item => {
           if (isWsAuthMessage(item)) {
@@ -158,7 +158,7 @@ function startListening(req) {
           ws.socket.send(item);
         })
       } catch (e) {
-        logger.error(e, 'failed to send message to web socket');
+        logger.error(e, '[WebSocket] failed to send message to web socket');
         return false;
       }
     }
@@ -168,7 +168,7 @@ function startListening(req) {
   });
 
   ws.socket.on('message', function message(data) {
-    logger.debug({ data: data.toString() }, 'received message on WebSocket');
+    logger.debug({ data: data.toString() }, '[WebSocket] received message');
 
     socketBetweenClientToProxy
       .compress(false)
@@ -176,7 +176,7 @@ function startListening(req) {
   });
 
   ws.socket.on('close', () => {
-    logger.info('WebSocket client closed');
+    logger.info('[WebSocket] client closed');
 
     ws.open = false;
     // TODO - should I terminate it?
@@ -186,13 +186,14 @@ function startListening(req) {
 }
 
 function sendMessages(req) {
-  logger.info({requestId: req.requestId}, 'Send message');
+  logger.info({requestId: req.requestId}, '[WebSocket] Send message');
 
-  const ws = wsConnections[req.clientId];
+  let ws = wsConnections[req.clientId];
 
   if (!ws) {
-    logger.error({ clientId: req.clientId }, 'Not connected exiting');
-    startListening();
+    logger.error({ clientId: req.clientId }, '[WebSocket] Not connected, connecting...');
+    startListening(req);
+    ws = wsConnections[req.clientId];
   }
 
   const messageToSend = req.body.toString();
@@ -203,7 +204,7 @@ function sendMessages(req) {
   }
 
   if (ws.authenticated && isWsAuthMessage(messageToSend)) {
-    logger.info('Received auth message why the socket open which means that the server disconnected');
+    logger.info('[WebSocket] Received auth message why the socket open which means that the server disconnected');
 
     ws.socket?.terminate();
     ws.socket?.eventNames().forEach(eventName => ws.socket.removeAllListeners(eventName))
@@ -216,7 +217,7 @@ function sendMessages(req) {
     return;
   }
 
-  logger.info({ messageToSend }, 'send to home assistant');
+  logger.info({ messageToSend }, '[WebSocket] send to HomeAssistant');
 
   ws.socket.send(messageToSend);
 }
@@ -229,7 +230,7 @@ function proxyHttpRequest(req) {
     params: req.params,
     url: req.url,
   }).then((res) => {
-    logger.debug('Response was successful', {
+    logger.debug('[HTTP] Response was successful', {
       status: res.status,
       headers: res.headers,
       data: res.data,
@@ -245,7 +246,8 @@ function proxyHttpRequest(req) {
       headers: error.response?.headers,
       status: error.response?.status,
       error,
-    }, 'Some error in the response');
+      req,
+    }, '[HTTP] Some error in the response');
 
     return {
       status: error.response?.status,
@@ -256,25 +258,37 @@ function proxyHttpRequest(req) {
 }
 
 function stopListening(req) {
-  logger.info({requestId: req.requestId}, 'Stop Listening');
+  logger.info({requestId: req.requestId}, '[WebSocket] Stop Listening');
 
   let ws = wsConnections[req.clientId];
 
   if (!ws) {
-    logger.info({ requestId: req.requestId }, 'WebSocket already closed');
+    logger.info({ requestId: req.requestId }, '[WebSocket] not exist');
     return;
   }
 
   if (!ws.open) {
-    logger.info({ requestId: req.requestId }, 'WebSocket already closed');
+    logger.info({ requestId: req.requestId }, '[WebSocket] already closed');
   }
 
 
   ws.socket?.terminate();
   ws.socket?.eventNames().forEach(eventName => ws.socket.removeAllListeners(eventName))
   wsConnections[req.clientId] = undefined;
+
+  logger.info({ requestId: req.requestId }, '[WebSocket] closed');
 }
 
+
+function logEvent(event, req) {
+  let mutableReq = { ...req };
+
+  if(Buffer.isBuffer(mutableReq.body)) {
+    mutableReq.body = mutableReq.body.toString();
+  }
+
+  logger.debug(mutableReq, `[${event}] got event`);
+}
 
 run()
   .catch((error) => {
