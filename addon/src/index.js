@@ -234,11 +234,14 @@ function proxyHttpRequest(req) {
     headers: req.headers,
     params: req.params,
     url: req.url,
+
+    // Setting as array buffer so images and stuff like that so the images won't corrupt from the conversion...
+    responseType: 'arraybuffer',
   }).then((res) => {
     logger.debug('[HTTP] Response was successful', {
       status: res.status,
       headers: res.headers,
-      data: res.data,
+      data: res.data?.toString(),
     });
     return {
       status: res.status,
@@ -256,7 +259,6 @@ function proxyHttpRequest(req) {
       headers: error.response?.headers,
       status: error.response?.status,
       error: error?.message,
-      // req,
     }, '[HTTP] Some error in the response');
 
     return {
