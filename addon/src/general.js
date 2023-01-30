@@ -1,8 +1,9 @@
 /**
  * Deep freeze object
- * @param {object} object
+ * @param {T} object
  * @param {any} frozenObjectsSet
- * @return {object}
+ * @return {T}
+ * @template T
  */
 function deepFreeze(object, frozenObjectsSet = new WeakSet()) {
   // Retrieve the property names defined on object
