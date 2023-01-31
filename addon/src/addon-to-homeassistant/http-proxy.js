@@ -6,6 +6,27 @@ function convertArrayBufferToString(arrayBuffer) {
   return Buffer.from(arrayBuffer.buffer).toString()
 }
 
+function parseRequestBody(body, logMeta) {
+  if (body === undefined) {
+    return body;
+  }
+
+  if (typeof body === 'string') {
+    return body;
+  }
+
+  if(typeof body !== 'object') {
+    logger.warn(logMeta, 'body is not of type object or string');
+    return body;
+  }
+
+  if(Buffer.isBuffer(body)) {
+    return body;
+  }
+
+  return JSON.stringify(body);
+}
+
 async function proxyHttpRequest(req) {
   const contentLengthHeaders = Object.keys(req.headers).filter(header => header.toLowerCase() === 'content-length');
 
@@ -18,7 +39,7 @@ async function proxyHttpRequest(req) {
     origin: config.localHomeAssistantUrl,
     path: req.url,
     method: req.method,
-    body: req.body,
+    body: parseRequestBody(req.body, req),
     headers: req.headers,
   });
 
