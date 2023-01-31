@@ -14,7 +14,9 @@ async function proxyHttpRequest(req) {
     delete req.headers[header];
   });
 
-  const { statusCode, headers, body } = await request(config.localHomeAssistantUrl + req.url, {
+  const { statusCode, headers, body } = await request({
+    origin: config.localHomeAssistantUrl,
+    path: req.url,
     method: req.method,
     data: req.body,
     headers: req.headers,
@@ -35,6 +37,12 @@ async function proxyHttpRequest(req) {
       headers: headers,
       data: convertArrayBufferToString(bufferBody),
     });
+  }
+
+  return {
+    status: statusCode,
+    headers: headers,
+    data: bufferBody,
   }
 }
 
