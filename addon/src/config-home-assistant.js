@@ -1,33 +1,44 @@
-const fs = require('fs/promises');
+const fs = require('fs');
 
 const logger = require('./logger');
 const { deepFreeze } = require('./general');
 
-const CONFIG_FILE = '/data/options.json'
-
-let config;
+const CONFIG_FILE = '/data/options.json';
 
 /**
- * This will read the config file
- * @return {Promise<object>}
+ * @type {{
+ *  localHomeAssistantUrl: string,
+ *  remoteWsUrl: string,
+ *  logLevel: string,
+ *  socketToken: string,
+ * }}
  */
-async function loadConfig() {
-  if (!config) {
-    try {
-      const configStr = (await fs.readFile(CONFIG_FILE)).toString();
+let config;
 
-      config = deepFreeze(JSON.parse(configStr));
-    } catch (error) {
-      logger.error({ path: CONFIG_FILE, error }, 'Could not parse options file');
+try {
+  config = JSON.parse((fs.readFileSync(CONFIG_FILE)).toString());
+} catch (error) {
+  logger.error({ path: CONFIG_FILE, error }, 'Could not parse options file');
 
-      throw error;
-    }
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
   }
 
-  return config;
+  config = {
+    localHomeAssistantUrl: "http://192.168.1.3:8123", // "http://homeassistant.local:8123",
+    remoteWsUrl: "ws://192.168.1.10:3000",
+    socketToken: "dsaa",
+    logLevel: "debug",
+  };
 }
 
+config.localHomeAssistantUrl = config.localHomeAssistantUrl ?? process.env.LOCAL_HOME_ASSISTANT_URL ?? 'http://homeassistant.local:8123'
+config.logLevel = config.logLevel ?? 'info';
+config.remoteWsUrl = config.remoteWsUrl ?? process.env.REMOTE_WS_URL ?? 'ws://localhost:3000';
+config.socketToken = config.socketToken ?? process.env.SOCKET_TOKEN ?? 'dsaa';
+
+config = deepFreeze(config);
 
 module.exports = {
-  loadConfig,
+  config,
 }
