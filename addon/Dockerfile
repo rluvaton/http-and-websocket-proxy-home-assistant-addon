@@ -23,7 +23,6 @@ WORKDIR /usr/src/app
 
 # Copy it before the code so Docker caching will help us build images faster
 COPY package*.json ./
-COPY ./patches patches
 
 # Install only production dependencies.
 RUN npm ci --only=production
