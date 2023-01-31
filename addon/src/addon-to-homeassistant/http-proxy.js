@@ -1,10 +1,10 @@
 const logger = require('../logger');
-const Axios = require('axios');
 const { config } = require('../config-home-assistant');
+const { request } = require('undici');
 
-const axios = Axios.create({
-  baseURL: config.localHomeAssistantUrl,
-});
+function convertArrayBufferToString(arrayBuffer) {
+  return Buffer.from(arrayBuffer.buffer).toString()
+}
 
 async function proxyHttpRequest(req) {
   const contentLengthHeaders = Object.keys(req.headers).filter(header => header.toLowerCase() === 'content-length');
@@ -14,48 +14,27 @@ async function proxyHttpRequest(req) {
     delete req.headers[header];
   });
 
-  try {
-    const response = await axios.request({
-      method: req.method,
-      data: req.body,
-      headers: req.headers,
-      params: req.params,
-      url: req.url,
+  const { statusCode, headers, body } = await request(config.localHomeAssistantUrl + req.url, {
+    method: req.method,
+    data: req.body,
+    headers: req.headers,
+  });
 
-      // Setting as array buffer so images and stuff like that so the images won't corrupt from the conversion...
-      responseType: 'arraybuffer',
-    });
+  const bufferBody = await body.arrayBuffer();
 
-    logger.debug('[HTTP] Response was successful', {
-      status: response.status,
-      headers: response.headers,
-      data: response.data?.toString(),
-    });
-
-    return {
-      status: response.status,
-      headers: response.headers,
-      data: response.data,
-    }
-  } catch (error) {
-    let responseData = error.response?.data;
-
-    if (Buffer.isBuffer(responseData)) {
-      responseData = responseData.toString();
-    }
-
+  if (statusCode >= 400) {
     logger.error({
-      response: responseData,
-      headers: error.response?.headers,
-      status: error.response?.status,
-      error: error?.message,
+      status: statusCode,
+      headers: headers,
+      response: convertArrayBufferToString(bufferBody),
     }, '[HTTP] Some error in the response');
-
-    return {
-      status: error.response?.status,
-      headers: error.response?.headers,
-      data: error.response?.data,
-    }
+  } else if (logger.isLevelEnabled('debug')) {
+    // Doing this in if even though debug won't log as `convertArrayBufferToString` can be expensive for large strings
+    logger.debug('[HTTP] Response was successful', {
+      status: statusCode,
+      headers: headers,
+      data: convertArrayBufferToString(bufferBody),
+    });
   }
 }
 

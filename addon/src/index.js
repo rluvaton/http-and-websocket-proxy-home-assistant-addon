@@ -11,5 +11,5 @@ logger.debug({
 logger.info(`Local Home Assistant address: ${config.localHomeAssistantUrl}`);
 logger.info(`Remote WebSocket URL: ${config.remoteWsUrl}`);
 
-const { startListening } = require('./addon-to-server/client');
+const { startListening } = require('./addon-to-server/listen');
 startListening();
