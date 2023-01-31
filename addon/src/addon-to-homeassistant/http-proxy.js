@@ -18,7 +18,7 @@ async function proxyHttpRequest(req) {
     origin: config.localHomeAssistantUrl,
     path: req.url,
     method: req.method,
-    data: req.body,
+    body: req.body,
     headers: req.headers,
   });
 
